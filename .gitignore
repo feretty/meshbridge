@@ -1,0 +1,11 @@
+# Логи и данные
+meshbridge.log
+node_names.json
+favorites.json
+
+# Секреты
+.env
+
+# Резервные копии
+*.backup
+*~

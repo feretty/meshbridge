@@ -1,0 +1,15 @@
+services:
+  meshbridge:
+    build: .
+    env_file:
+      - .env
+    devices:
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    volumes:
+      - "./:/app"
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
