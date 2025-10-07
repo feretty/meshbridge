@@ -13,7 +13,6 @@ from pubsub import pub
 
 nest_asyncio.apply()
 
-# === Настройка логгера ===
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -27,13 +26,12 @@ logging.getLogger("meshtastic").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("telegram.ext").setLevel(logging.INFO)
 
-# === Глобальные переменные ===
 interface = None
 application = None
 CHANNEL_TO_CHAT = {}
 MAIN_LOOP = None
 ADMIN_USER_ID = None
-NODE_NAME_CACHE = {}  # { "498EB0": "FTG8", ... }
+NODE_NAME_CACHE = {}
 NODE_NAME_FILE = "node_names.json"
 FAVORITES_FILE = "favorites.json"
 START_TIME = time.time()
@@ -43,7 +41,6 @@ NODE_MESSAGE_HISTORY = {}
 MAX_HISTORY_DAYS = 7
 SEEN_NODES = set()
 
-# === Вспомогательная функция для получения суффикса ===
 def get_node_suffix(node_id):
     if isinstance(node_id, str) and node_id.startswith('!'):
         try:
@@ -54,7 +51,6 @@ def get_node_suffix(node_id):
         num_id = node_id
     return f"{num_id & 0xFFFFFF:06X}"
 
-# === Работа с избранными нодами ===
 def load_favorites():
     try:
         with open(FAVORITES_FILE, "r") as f:
@@ -71,7 +67,6 @@ def save_favorites(favorites):
     except Exception as e:
         logger.error(f"Ошибка сохранения {FAVORITES_FILE}: {e}")
 
-# === Функции для работы с кэшем имён ===
 def load_node_name_cache():
     global NODE_NAME_CACHE, SEEN_NODES
     try:
@@ -122,7 +117,6 @@ def update_node_name_cache():
     save_node_name_cache()
     return {"total": total, "added": added, "updated": updated}
 
-# === Уведомление о новых нодах ===
 async def notify_new_nodes():
     global SEEN_NODES
     while True:
@@ -147,7 +141,6 @@ async def notify_new_nodes():
             logger.warning(f"Ошибка уведомления о новых нодах: {e}")
             await asyncio.sleep(60)
 
-# === Мониторинг напряжения избранных нод ===
 async def monitor_favorite_battery():
     last_notified = {}
     while True:
@@ -174,7 +167,6 @@ async def monitor_favorite_battery():
             logger.warning(f"Ошибка мониторинга избранных нод: {e}")
             await asyncio.sleep(60)
 
-# === Автообновление кэша имён нод ===
 async def auto_update_names():
     while True:
         try:
@@ -183,7 +175,6 @@ async def auto_update_names():
             logger.warning(f"Ошибка автообновления кэша: {e}")
         await asyncio.sleep(1800)
 
-# === Мониторинг Meshtastic ===
 async def monitor_meshtastic():
     last_warned = False
     while True:
@@ -202,7 +193,6 @@ async def monitor_meshtastic():
             logger.warning(f"Ошибка мониторинга Meshtastic: {e}")
             await asyncio.sleep(60)
 
-# === Функция разбивки длинных сообщений ===
 def split_message(text, max_length=80):
     if len(text) <= max_length:
         return [text]
@@ -219,7 +209,6 @@ def split_message(text, max_length=80):
         parts.append(' '.join(current))
     return parts
 
-# === Обработчик Meshtastic ===
 def on_meshtastic_message(packet, interface):
     logger.debug(f"📥 Получено: {packet}")
     try:
@@ -283,7 +272,6 @@ def on_meshtastic_message(packet, interface):
     except Exception as e:
         logger.exception("Ошибка в обработчике Meshtastic")
 
-# === Обработчик Telegram ===
 async def telegram_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     chat_id = update.effective_chat.id
@@ -314,7 +302,6 @@ async def telegram_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.exception(f"Ошибка отправки части {i+1} в Meshtastic")
 
-# === Обработчик команд ===
 async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.type != "private":
         return
@@ -328,7 +315,6 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not raw_text:
             return
 
-        # === ПРИВАТНОЕ СООБЩЕНИЕ: @Имя текст ===
         if raw_text.startswith("@"):
             parts_at = raw_text[1:].split(maxsplit=1)
             if len(parts_at) < 2:
@@ -337,7 +323,6 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             target_name = parts_at[0]
             message_text = parts_at[1]
 
-            # Ищем по кэшу имён и суффиксам
             target_suffix = None
             for suffix, name in NODE_NAME_CACHE.items():
                 if name == target_name or suffix == target_name.upper():
@@ -348,7 +333,6 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"❌ Нода '{target_name}' не найдена в кэше")
                 return
 
-            # Находим полный NodeID
             target_id = None
             for node_id in getattr(interface, 'nodes', {}):
                 suffix = get_node_suffix(node_id)
@@ -367,7 +351,6 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"⚠️ Ошибка: {e}")
             return
 
-        # === КОМАНДА: /команда ... ===
         if raw_text.startswith("/"):
             parts = raw_text[1:].split()
             if not parts:
@@ -377,7 +360,6 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cmd = parts[0].lower()
             args = parts[1:]
 
-            # --- Помощь ---
             if cmd == "help":
                 help_text = (
                     "📊 Команды статистики:\n"
@@ -402,7 +384,6 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(help_text)
                 return
 
-            # --- Управление избранными ---
             if cmd == "fav_add" and args:
                 target = args[0].upper()
                 target_suffix = None
@@ -641,13 +622,12 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     if count > 0:
                         today_stats.append(f"{NODE_NAME_CACHE.get(suffix, suffix)}: {count}")
 
-                # === Топ-5 нод по SNR за сегодня ===
                 snr_today = []
                 now = time.time()
                 for node_id, node in getattr(interface, 'nodes', {}).items():
                     last_heard = node.get('lastHeard', 0)
                     snr = node.get('snr')
-                    if snr is not None and now - last_heard <= 86400:  # за последние 24 часа
+                    if snr is not None and now - last_heard <= 86400:
                         suffix = get_node_suffix(node_id)
                         if suffix:
                             name = NODE_NAME_CACHE.get(suffix, suffix)
@@ -808,18 +788,15 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(reply)
                 return
 
-            # Неизвестная команда
             await update.message.reply_text("❓ Неизвестная команда. Используй /help")
 
         else:
-            # Не начинается ни с /, ни с @ — игнор
             return
 
     except Exception as e:
         logger.exception("Ошибка в command_handler")
         await update.message.reply_text(f"💥 {e}")
 
-# === Переподключение к Meshtastic ===
 async def connect_meshtastic():
     global interface
     while True:
@@ -837,7 +814,6 @@ async def connect_meshtastic():
                 await application.bot.send_message(chat_id=ADMIN_USER_ID, text=f"❌ Ошибка подключения к Meshtastic: {e}\nПробую переподключиться через 30 секунд...")
             await asyncio.sleep(30)
 
-# === Основная функция ===
 async def main():
     global interface, application, CHANNEL_TO_CHAT, MAIN_LOOP, ADMIN_USER_ID
 
@@ -871,13 +847,11 @@ async def main():
 
     application = Application.builder().token(BOT_TOKEN).build()
     
-    # Обработчик для групповых чатов (каналов)
     application.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND & filters.ChatType.GROUPS,
         telegram_handler
     ))
 
-    # Обработчик для личных сообщений (всех, включая команды и @)
     application.add_handler(MessageHandler(
         filters.TEXT & filters.ChatType.PRIVATE,
         command_handler
@@ -892,6 +866,5 @@ async def main():
     logger.info("✅ Telegram бот запущен. Ожидание сообщений...")
     await application.run_polling()
 
-# === Точка входа ===
 if __name__ == "__main__":
     asyncio.run(main())
