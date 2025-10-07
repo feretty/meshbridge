@@ -298,10 +298,6 @@ async def telegram_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             channel = ch_index
             break
 
-    #if channel is None:
-        #logger.warning(f"Сообщение из неавторизованного чата: {chat_id}")
-        #return
-
     enriched_text = f"[TG: {display_name}] {text}"
     parts = split_message(enriched_text, max_length=80)
 
@@ -457,7 +453,6 @@ async def command_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await update.message.reply_text("⭐ Избранные ноды:\n" + "\n".join(lines))
                 return
 
-            # --- Остальные команды (без изменений) ---
             if cmd == "uptime":
                 bot_uptime = int(time.time() - START_TIME)
                 node_uptime = None
