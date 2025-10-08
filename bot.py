@@ -155,10 +155,9 @@ async def monitor_favorite_battery():
                         metrics = node.get('deviceMetrics', {})
                         voltage = metrics.get('voltage')
                         if voltage is not None and voltage > 0:
-                            # Обновляем историю напряжения
+                            
                             BATTERY_VOLTAGE_HISTORY[suffix] = voltage
 
-                            # Если напряжение упало ниже порога и ещё не уведомляли
                             if voltage < BATTERY_LOW_THRESHOLD and suffix not in BATTERY_LOW_NOTIFIED:
                                 name = NODE_NAME_CACHE.get(suffix, suffix)
                                 message = f"⚠️ Низкое напряжение на {name}: {voltage:.2f}V"
@@ -167,7 +166,6 @@ async def monitor_favorite_battery():
                                     logger.info(f"🔋 Уведомление о низком заряде {name}: {voltage:.2f}V")
                                 BATTERY_LOW_NOTIFIED.add(suffix)
 
-                            # Если напряжение восстановилось — снимаем флаг
                             elif voltage >= BATTERY_LOW_THRESHOLD and suffix in BATTERY_LOW_NOTIFIED:
                                 BATTERY_LOW_NOTIFIED.discard(suffix)
                                 logger.info(f"🔋 Заряд {suffix} восстановлен: {voltage:.2f}V")
@@ -851,7 +849,6 @@ async def main():
         logger.critical(f"❌ Некорректный формат ID: {e}")
         return
 
-    # Формируем маппинг: {mesh_channel: telegram_chat_id}
     CHANNEL_TO_CHAT = {
         MESH_CHANNEL_PUBLIC: CHAT_ID_PUBLIC,
         MESH_CHANNEL_PRIVATE: CHAT_ID_PRIVATE
