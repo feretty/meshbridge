@@ -40,6 +40,9 @@ NODE_MESSAGE_COUNT = {}
 NODE_MESSAGE_HISTORY = {}
 MAX_HISTORY_DAYS = 7
 SEEN_NODES = set()
+BATTERY_VOLTAGE_HISTORY = {}
+BATTERY_LOW_NOTIFIED = set()
+BATTERY_LOW_THRESHOLD = 3.5
 
 def get_node_suffix(node_id):
     if isinstance(node_id, str) and node_id.startswith('!'):
@@ -142,7 +145,6 @@ async def notify_new_nodes():
             await asyncio.sleep(60)
 
 async def monitor_favorite_battery():
-    last_notified = {}
     while True:
         try:
             favorites = load_favorites()
@@ -152,16 +154,24 @@ async def monitor_favorite_battery():
                     if suffix in favorites:
                         metrics = node.get('deviceMetrics', {})
                         voltage = metrics.get('voltage')
-                        if voltage is not None and voltage > 0 and voltage < 3.5:
-                            now = time.time()
-                            last_time = last_notified.get(suffix, 0)
-                            if now - last_time > 300:
+                        if voltage is not None and voltage > 0:
+                            # Обновляем историю напряжения
+                            BATTERY_VOLTAGE_HISTORY[suffix] = voltage
+
+                            # Если напряжение упало ниже порога и ещё не уведомляли
+                            if voltage < BATTERY_LOW_THRESHOLD and suffix not in BATTERY_LOW_NOTIFIED:
                                 name = NODE_NAME_CACHE.get(suffix, suffix)
                                 message = f"⚠️ Низкое напряжение на {name}: {voltage:.2f}V"
                                 if ADMIN_USER_ID and application:
                                     await application.bot.send_message(chat_id=ADMIN_USER_ID, text=message)
                                     logger.info(f"🔋 Уведомление о низком заряде {name}: {voltage:.2f}V")
-                                last_notified[suffix] = now
+                                BATTERY_LOW_NOTIFIED.add(suffix)
+
+                            # Если напряжение восстановилось — снимаем флаг
+                            elif voltage >= BATTERY_LOW_THRESHOLD and suffix in BATTERY_LOW_NOTIFIED:
+                                BATTERY_LOW_NOTIFIED.discard(suffix)
+                                logger.info(f"🔋 Заряд {suffix} восстановлен: {voltage:.2f}V")
+
             await asyncio.sleep(60)
         except Exception as e:
             logger.warning(f"Ошибка мониторинга избранных нод: {e}")
