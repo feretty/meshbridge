@@ -830,28 +830,33 @@ async def main():
     MAIN_LOOP = asyncio.get_running_loop()
 
     BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    CHAT_ID_0_RAW = os.getenv("CHAT_ID_CHANNEL_0")
-    CHAT_ID_1_RAW = os.getenv("CHAT_ID_CHANNEL_1")
+    CHAT_ID_PUBLIC_RAW = os.getenv("CHAT_ID_PUBLIC")
+    CHAT_ID_PRIVATE_RAW = os.getenv("CHAT_ID_PRIVATE")
+    MESH_CHANNEL_PUBLIC_RAW = os.getenv("MESH_CHANNEL_PUBLIC")
+    MESH_CHANNEL_PRIVATE_RAW = os.getenv("MESH_CHANNEL_PRIVATE")
     ADMIN_USER_ID_RAW = os.getenv("ADMIN_USER_ID")
 
-    if not BOT_TOKEN or not CHAT_ID_0_RAW or not CHAT_ID_1_RAW:
+    if not all([BOT_TOKEN, CHAT_ID_PUBLIC_RAW, CHAT_ID_PRIVATE_RAW, 
+                MESH_CHANNEL_PUBLIC_RAW, MESH_CHANNEL_PRIVATE_RAW]):
         logger.critical("❌ Отсутствуют обязательные переменные в .env")
         return
 
-    if not ADMIN_USER_ID_RAW:
-        logger.critical("❌ ADMIN_USER_ID не задан в .env")
-        return
-
     try:
-        CHAT_ID_0 = int(CHAT_ID_0_RAW)
-        CHAT_ID_1 = int(CHAT_ID_1_RAW)
+        CHAT_ID_PUBLIC = int(CHAT_ID_PUBLIC_RAW)
+        CHAT_ID_PRIVATE = int(CHAT_ID_PRIVATE_RAW)
+        MESH_CHANNEL_PUBLIC = int(MESH_CHANNEL_PUBLIC_RAW)
+        MESH_CHANNEL_PRIVATE = int(MESH_CHANNEL_PRIVATE_RAW)
         ADMIN_USER_ID = int(ADMIN_USER_ID_RAW)
     except ValueError as e:
         logger.critical(f"❌ Некорректный формат ID: {e}")
         return
 
-    CHANNEL_TO_CHAT = {0: CHAT_ID_0, 1: CHAT_ID_1}
-    logger.info(f"✅ Загружены настройки: {CHANNEL_TO_CHAT}")
+    # Формируем маппинг: {mesh_channel: telegram_chat_id}
+    CHANNEL_TO_CHAT = {
+        MESH_CHANNEL_PUBLIC: CHAT_ID_PUBLIC,
+        MESH_CHANNEL_PRIVATE: CHAT_ID_PRIVATE
+    }
+    logger.info(f"✅ Загружены настройки каналов: {CHANNEL_TO_CHAT}")
 
     load_node_name_cache()
 
