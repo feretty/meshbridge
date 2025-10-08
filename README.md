@@ -151,8 +151,10 @@ services:
 ### `.env` (пример)
 ```env
 TELEGRAM_BOT_TOKEN=123456789:ABCdefGhIJKlmNoPQRstUVwXY
-CHAT_ID_CHANNEL_0=-1001234567890
-CHAT_ID_CHANNEL_1=-1009876543210
+CHAT_ID_PUBLIC=-1001234567890      # Telegram-чат для публичного канала
+CHAT_ID_PRIVATE=-1009876543210     # Telegram-чат для приватного канала
+MESH_CHANNEL_PUBLIC=2              # Номер канала в Meshtastic (0–7)
+MESH_CHANNEL_PRIVATE=5             # Номер канала в Meshtastic (0–7)
 ADMIN_USER_ID=123456789
 ```
 
