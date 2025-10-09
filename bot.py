@@ -120,8 +120,6 @@ def update_node_name_cache():
     save_node_name_cache()
     return {"total": total, "added": added, "updated": updated}
 
-import datetime
-
 async def daily_reboot_task():
     """Ежедневная перезагрузка в 00:15"""
     while True:
