@@ -4,7 +4,7 @@ import logging
 import time
 import nest_asyncio
 import json
-import subprocess
+import datetime
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from meshtastic.serial_interface import SerialInterface
@@ -119,6 +119,28 @@ def update_node_name_cache():
     logger.info(f"🔄 Кэш имён обновлён: добавлено {added}, обновлено {updated}, всего {len(NODE_NAME_CACHE)} нод")
     save_node_name_cache()
     return {"total": total, "added": added, "updated": updated}
+
+import datetime
+
+async def daily_reboot_task():
+    """Ежедневная перезагрузка в 00:15"""
+    while True:
+        now = datetime.datetime.now()
+        # Следующая 00:15
+        next_reboot = now.replace(hour=0, minute=15, second=0, microsecond=0)
+        if now >= next_reboot:
+            next_reboot += datetime.timedelta(days=1)
+        sleep_seconds = (next_reboot - now).total_seconds()
+        logger.info(f"💤 Следующая перезагрузка: {next_reboot}")
+        await asyncio.sleep(sleep_seconds)
+        if interface:
+            logger.info("🔄 Запуск ежедневной перезагрузки")
+            interface.localNode.reboot()
+            if ADMIN_USER_ID and application:
+                await application.bot.send_message(
+                    chat_id=ADMIN_USER_ID,
+                    text="🔄 Ежедневная перезагрузка выполнена"
+                )
 
 async def notify_new_nodes():
     global SEEN_NODES
@@ -874,6 +896,7 @@ async def main():
     asyncio.create_task(monitor_meshtastic())
     asyncio.create_task(notify_new_nodes())
     asyncio.create_task(monitor_favorite_battery())
+    asyncio.create_task(daily_reboot_task())
 
     logger.info("✅ Telegram бот запущен. Ожидание сообщений...")
     await application.run_polling()
