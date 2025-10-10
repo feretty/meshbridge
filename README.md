@@ -137,6 +137,10 @@ services:
       - "/dev/ttyACM0:/dev/ttyACM0"
     volumes:
       - "./:/app"
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      - TZ=Europe/Moscow
     restart: unless-stopped
     logging:
       driver: "json-file"
